@@ -6,20 +6,29 @@
 """
 
 import re
+from multiprocessing import Pool
+import itertools
+
 import pandas as pd
 from tqdm import tqdm
+
+
+def match_identities(text, identity_pat):
+    """ Search within posts for identity matches, return them """
+    return re.findall(identity_pat, str(text).lower())
 
 
 class DataProcessor:
     """ Load, process, and save out incels data """
 
-    def __init__(self, inpath, outpath, resources_paths, identity_list = 'netmapper', identity_exclude = []):
+    def __init__(self, inpath, outpath, resources_paths, identity_list = 'netmapper', identity_exclude = [], identity_include=[]):
         """ Args:
                 inpath: path to the input data
                 outpath: path to output (without ending, to be saved with JSON table pandas format and JSON lines)
                 resources_paths: paths for resources used (like identity term lists)
                 identity_list: str name of the identity list to use (default netmapper)
                 identity_exclude: list of terms to exclude from the identity list
+                identity_exclude: list of terms to add to the identity list
         """
         self.inpath = inpath
         self.outpath = outpath
@@ -27,6 +36,7 @@ class DataProcessor:
         self.identity_list = identity_list
         self.identity_list_path = self.resources_paths[f'{self.identity_list}_identities']
         self.identity_exclude = identity_exclude
+        self.identity_include = identity_include
 
     def load(self):
         """ Load data """
@@ -56,13 +66,19 @@ class DataProcessor:
 
         # Separate out stopwords
         stops = en_identities[en_identities['stop word']==1]
-        exclude = en_identities[en_identities['term'].isin(self.identity_exclude)]
-        identities = en_identities[(en_identities['stop word']!=1) & (~en_identities['term'].isin(self.identity_exclude))]
-        self.identities = self.filter_identities(identities['term'])
+        #exclude = en_identities[en_identities['term'].isin(self.identity_exclude)]
+        identities = en_identities[
+            (en_identities['stop word']!=1) & (~en_identities['term'].isin(self.identity_exclude))
+        ]
+        self.identities = self.filter_identities(identities['term']) + self.identity_include
 
         # Search for matches
+        #self.identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
         identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
-        self.data['{self.identity_list}_identity_matches'] = [re.findall(identity_pat, str(text).lower()) for text in tqdm(self.data.content, ncols=80)]
+        zipped = list(zip(self.data.content.tolist(), itertools.repeat(identity_pat)))
+        with Pool(20) as p:
+            #self.data[f'{self.identity_list}_identity_matches'] = p.starmap(self.match_identities, tqdm(self.data.content, ncols=80)) # faster but errored with TypeError: DataProcessor.match_identities() takes 2 positional arguments but 49 were given
+            self.data[f'{self.identity_list}_identity_matches'] = p.starmap(match_identities, tqdm(zipped, ncols=80))
 
     def filter_identities(self, identities):
         """ Filter identity list to only those present in the data's vocabulary, returns this list """
@@ -85,6 +101,10 @@ class DataProcessor:
         self.data.to_pickle(self.outpath + '.pkl')
         print(f'Saved output to {self.outpath + ".pkl"}')
 
+    #def match_identities(self, text):
+    #    """ Search within posts for identity matches, return them """
+    #    return re.findall(self.identity_pat, str(text).lower())
+
 
 def main():
 
@@ -103,11 +123,20 @@ def main():
                 'dr', 'doctor', 'dahmer', 'characters', 'cheat', 'sexist', 'professional', 'client', 'mate', 'dad', 'customers', 'assholes', 'whose',
                 'mama', 'co-workers', 'employees', 'uncle', 'hermit', 'ogre', 'potter', 'phantom', 'dwellers', 'saviour', 'prophet', 'morons', 'guide',
                 'majors', 'partners', 'villain', 'agent', 'model', 'juggernaut', 'ego', 'avatar', 'player', 'dragon', 'pm', 'winner', 'winners', 'surrogate', 'nudes',
-            'blogger', 'bloggers'
+            'blogger', 'bloggers', 'loser', 'losers', 'adult', 'avatars', 'partner', 'idiot', 'clown', 'bully', 'slave', 'adults',
+        'hunter', 'troll', 'hunters', 'trolls', 'master', 'masters', 'victim', 'driver', 'slaves',
                ]
+    identity_include = [
+        'jewish', 'kikes', 'judaism', 'goy', 'goyim', 'black people', 'white people',
+        'black woman', 'black man', 'black women', 'black men', 'white women', 'white woman', 'white man', 'white men',
+        'non white', 'non whites', 'white trash',
+        'gay', 'trans', 'transgender', 'bi', 'bisexual', 'bisexuals', 'pansexual', 'pansexuals', 'non-binary', 'genderqueer',
+        'homo', 'transman', 'transwoman', 'queers', 'fags',
+    ]
 
     # Process the data
-    processor = DataProcessor(inpath, outpath, resources_paths, identity_exclude=identity_exclude)
+    processor = DataProcessor(inpath, outpath, resources_paths, 
+        identity_exclude=identity_exclude, identity_include=identity_include)
     processor.load()
     processor.process()
 
