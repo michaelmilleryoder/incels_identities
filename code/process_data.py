@@ -6,6 +6,7 @@
 """
 
 import re
+import json
 from multiprocessing import Pool
 import itertools
 
@@ -21,22 +22,20 @@ def match_identities(text, identity_pat):
 class DataProcessor:
     """ Load, process, and save out incels data """
 
-    def __init__(self, inpath, outpath, resources_paths, identity_list = 'netmapper', identity_exclude = [], identity_include=[]):
+    def __init__(self, inpath, outpath, resources_paths, identity_list = 'netmapper'):
         """ Args:
                 inpath: path to the input data
                 outpath: path to output (without ending, to be saved with JSON table pandas format and JSON lines)
                 resources_paths: paths for resources used (like identity term lists)
                 identity_list: str name of the identity list to use (default netmapper)
-                identity_exclude: list of terms to exclude from the identity list
-                identity_exclude: list of terms to add to the identity list
         """
         self.inpath = inpath
         self.outpath = outpath
         self.resources_paths = resources_paths
         self.identity_list = identity_list
         self.identity_list_path = self.resources_paths[f'{self.identity_list}_identities']
-        self.identity_exclude = identity_exclude
-        self.identity_include = identity_include
+        self.identity_exclude_path = self.resources_paths[f'{self.identity_list}_exclude']
+        self.identity_include_path = self.resources_paths[f'{self.identity_list}_include']
 
     def load(self):
         """ Load data """
@@ -57,6 +56,10 @@ class DataProcessor:
 
         # Load identity terms
         multi_identities = pd.read_excel(self.identity_list_path)
+        with open(self.identity_exclude_path) as f:
+            identity_exclude = json.load(f)
+        with open(self.identity_include_path) as f:
+            identity_include = json.load(f)
 
         # Filter to English, remove duplicates
         cols = multi_identities.columns.tolist()
@@ -68,9 +71,9 @@ class DataProcessor:
         stops = en_identities[en_identities['stop word']==1]
         #exclude = en_identities[en_identities['term'].isin(self.identity_exclude)]
         identities = en_identities[
-            (en_identities['stop word']!=1) & (~en_identities['term'].isin(self.identity_exclude))
+            (en_identities['stop word']!=1) & (~en_identities['term'].isin(identity_include))
         ]
-        self.identities = self.filter_identities(identities['term']) + self.identity_include
+        self.identities = self.filter_identities(identities['term']) + identity_exclude
 
         # Search for matches
         #self.identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
@@ -112,31 +115,13 @@ def main():
     inpath = '../../data/incels/all_comments.csv'
     outpath = '../../data/incels/processed_comments'
     resources_paths = {
-        'netmapper_identities': '../resources/generic_agents-identity_v15_2021_10_15.xlsx'
+        'netmapper_identities': '../resources/generic_agents-identity_v15_2021_10_15.xlsx',
+        'netmapper_exclude': '../resources/netmapper_exclude.json',
+        'netmapper_include': '../resources/netmapper_include.json',
     }
-    identity_exclude = ['don', 'other', 'others', 'friend', 'friends', 'people', 'who', 'asshole', 'dick',
-               'character', 'person', 'people', 'majority', 'bot', 'everyone', 'everyone here',
-                'officially', 'tech', 'individual', 'worker', 'workers', 'giant', 'human', 'humans', 'ass',
-                'nobody', 'brother', 'sister', 'mother', "mother's", 'father', 'daughter', 'son', 'mom', 'wife', 'wives', 'husband', 'husbands', 'cousin', 'cousins',
-                'they all', 'count', 'god', 'general', 'user', 'users', 'member', 'members', 'english', 'finish', 'slayer', 'speaker',
-                'misogynist', 'king', 'queen', 'rn', 'fellow', 'buddy', 'enemies', 'corpse', 'revolutionary', 'gymnast', 'messiah', 'jesus', 'embryo',
-                'dr', 'doctor', 'dahmer', 'characters', 'cheat', 'sexist', 'professional', 'client', 'mate', 'dad', 'customers', 'assholes', 'whose',
-                'mama', 'co-workers', 'employees', 'uncle', 'hermit', 'ogre', 'potter', 'phantom', 'dwellers', 'saviour', 'prophet', 'morons', 'guide',
-                'majors', 'partners', 'villain', 'agent', 'model', 'juggernaut', 'ego', 'avatar', 'player', 'dragon', 'pm', 'winner', 'winners', 'surrogate', 'nudes',
-            'blogger', 'bloggers', 'loser', 'losers', 'adult', 'avatars', 'partner', 'idiot', 'clown', 'bully', 'slave', 'adults',
-        'hunter', 'troll', 'hunters', 'trolls', 'master', 'masters', 'victim', 'driver', 'slaves',
-               ]
-    identity_include = [
-        'jewish', 'kikes', 'judaism', 'goy', 'goyim', 'black people', 'white people',
-        'black woman', 'black man', 'black women', 'black men', 'white women', 'white woman', 'white man', 'white men',
-        'non white', 'non whites', 'white trash',
-        'gay', 'trans', 'transgender', 'bi', 'bisexual', 'bisexuals', 'pansexual', 'pansexuals', 'non-binary', 'genderqueer',
-        'homo', 'transman', 'transwoman', 'queers', 'fags',
-    ]
 
     # Process the data
-    processor = DataProcessor(inpath, outpath, resources_paths, 
-        identity_exclude=identity_exclude, identity_include=identity_include)
+    processor = DataProcessor(inpath, outpath, resources_paths)
     processor.load()
     processor.process()
 
