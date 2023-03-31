@@ -9,6 +9,7 @@ import re
 import json
 from multiprocessing import Pool
 import itertools
+import pdb
 
 import pandas as pd
 from tqdm import tqdm
@@ -69,11 +70,10 @@ class DataProcessor:
 
         # Separate out stopwords
         stops = en_identities[en_identities['stop word']==1]
-        #exclude = en_identities[en_identities['term'].isin(self.identity_exclude)]
         identities = en_identities[
-            (en_identities['stop word']!=1) & (~en_identities['term'].isin(identity_include))
+            (en_identities['stop word']!=1) & (~en_identities['term'].isin(identity_exclude))
         ]
-        self.identities = self.filter_identities(identities['term']) + identity_exclude
+        self.identities = self.filter_identities(identities['term']) + identity_include
 
         # Search for matches
         #self.identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
