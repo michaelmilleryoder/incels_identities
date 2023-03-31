@@ -99,6 +99,7 @@
 "feminist": ["women_girls"],
 "feminists": ["women_girls"],
 "white people": ["white_people"],
+"caucasian": ["white_people"],
 "white women": ["women_girls", "white_people"],
 "white men": ["men_boys", "white_people"],
 "black women": ["women_girls", "black_people"],
@@ -107,8 +108,6 @@
 "europeans": ["white_people"],
 "japanese": ["asian_people"],
 "chinese": ["asian_people"],
-"german": ["white_people"],
-"germans": ["white_people"],
 "muslim": ["muslims"],
 "muslims": ["muslims"],
 "bf": ["men_boys"],
@@ -132,5 +131,6 @@
 "mothers": ["women_girls"], 
 "fathers": ["men_boys"],
 "american": ["americans"],
-"chinks": ["asian_people"]
+"chinks": ["asian_people"],
+"teacher": ["teachers"]
 } 

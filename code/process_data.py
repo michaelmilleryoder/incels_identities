@@ -10,6 +10,7 @@ import json
 from multiprocessing import Pool
 import itertools
 import pdb
+from collections import Counter
 
 import pandas as pd
 from tqdm import tqdm
@@ -17,7 +18,22 @@ from tqdm import tqdm
 
 def match_identities(text, identity_pat):
     """ Search within posts for identity matches, return them """
-    return re.findall(identity_pat, str(text).lower())
+    all_matches = re.findall(identity_pat, str(text).lower())
+    limit = 20 # limit for number of unique identity mentions for each post
+    
+    res = []
+    ctr = Counter()
+    for match in all_matches:
+        ctr[match] += 1
+        if ctr[match] > limit:
+            continue
+        else:
+            res.append(match)
+
+    # Counter method (is slightly slower)
+    #ctr = Counter(all_matches)
+    #res = sum([[el] * min(count, limit) for el, count in ctr.items()], [])
+    return res
 
 
 class DataProcessor:
@@ -76,15 +92,17 @@ class DataProcessor:
         self.identities = self.filter_identities(identities['term']) + identity_include
 
         # Search for matches
-        #self.identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
         identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
         zipped = list(zip(self.data.content.tolist(), itertools.repeat(identity_pat)))
         with Pool(20) as p:
-            #self.data[f'{self.identity_list}_identity_matches'] = p.starmap(self.match_identities, tqdm(self.data.content, ncols=80)) # faster but errored with TypeError: DataProcessor.match_identities() takes 2 positional arguments but 49 were given
             self.data[f'{self.identity_list}_identity_matches'] = p.starmap(match_identities, tqdm(zipped, ncols=80))
-
+        # for debugging
+        #self.data[f'{self.identity_list}_identity_matches'] = [match_identities(*z) for z in tqdm(zipped, ncols=80)]
+        
+        
     def filter_identities(self, identities):
         """ Filter identity list to only those present in the data's vocabulary, returns this list """
+        # TODO: include multi-word terms that are in the data's bigrams or trigrams, too
 
         print("\tFiltering identity list...")
         pats = [re.compile(r'\b{}\b'.format(re.escape(term))) for term in identities]
