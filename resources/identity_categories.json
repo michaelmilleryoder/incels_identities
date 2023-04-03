@@ -2,6 +2,7 @@
     "black_people": "race/ethnicity",
     "asian_people": "race/ethnicity",
     "white_people": "race/ethnicity",
+    "latinx_people": "race/ethnicity",
     "men_boys": "gender/sexuality",
     "women_girls": "gender/sexuality",
     "lgbtq_people": "gender/sexuality",
