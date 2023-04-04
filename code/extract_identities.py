@@ -1,5 +1,5 @@
-""" Load and process incels data. Includes matching identity terms.
-    Saves out to JSON lines.
+""" Matching identity term lists in text datasets.
+    Saves out to JSON lines with a column including extracted identity term mentions.
 
     @author Michael Miller Yoder
     @date 2023
@@ -14,6 +14,7 @@ from collections import Counter
 
 import pandas as pd
 from tqdm import tqdm
+from sklearn.feature_extraction.text import CountVectorizer
 
 
 def match_identities(text, identity_pat):
@@ -36,16 +37,43 @@ def match_identities(text, identity_pat):
     return res
 
 
-class DataProcessor:
-    """ Load, process, and save out incels data """
+class DataLoader:
+    """ Load datasets """
 
-    def __init__(self, inpath, outpath, resources_paths, identity_list = 'netmapper'):
+    def __init__(self, dataset_name, inpath):
+        self.dataset_name = dataset_name
+        self.inpath = inpath
+        self.load_functions = { # mapping from dataset names to load functions
+            'incels': self.load_incels
+            'white_supremacist': self.load_pandas_pickle
+        }
+        self.data = None
+
+    def load(self):
+        """ Load and return dataset """
+        self.load_functions[self.dataset_name]()
+        return self.data
+
+    def load_incels(self):
+        self.data = pd.read_csv(self.inpath, engine='python', on_bad_lines=lambda row: row[:-2].append(' '.join(row[-2:]))) # combine last 2 elements in a line mentioning Gulag
+        self.data['parsed_date'] = pd.to_datetime(self.data.date, errors='coerce') # "yesterday" etc not handled
+
+    def load_pandas_pickle(self):
+        self.data = pd.read_pickle(self.inpath)
+
+
+class IdentityExtractor:
+    """ Load data, identify identity term matches from a list, save out """
+
+    def __init__(self, dataset_name, inpath, outpath, resources_paths, identity_list = 'netmapper'):
         """ Args:
+                dataset_name: dataset name, to be passed to DataLoader
                 inpath: path to the input data
                 outpath: path to output (without ending, to be saved with JSON table pandas format and JSON lines)
                 resources_paths: paths for resources used (like identity term lists)
                 identity_list: str name of the identity list to use (default netmapper)
         """
+        self.dataset_name = dataset_name
         self.inpath = inpath
         self.outpath = outpath
         self.resources_paths = resources_paths
@@ -57,8 +85,8 @@ class DataProcessor:
     def load(self):
         """ Load data """
         print("Loading data...")
-        self.data = pd.read_csv(self.inpath, engine='python', on_bad_lines=lambda row: row[:-2].append(' '.join(row[-2:]))) # combine last 2 elements in a line mentioning Gulag
-        self.data['parsed_date'] = pd.to_datetime(self.data.date, errors='coerce') # "yesterday" etc not handled
+        data_loader = DataLoader(self.dataset_name, self.inpath)
+        self.data = data_loader.load()
 
     def process(self, save = True):
         """ Process data and optionally save """
@@ -89,7 +117,7 @@ class DataProcessor:
         identities = en_identities[
             (en_identities['stop word']!=1) & (~en_identities['term'].isin(identity_exclude))
         ]
-        self.identities = self.filter_identities(identities['term']) + identity_include
+        self.identities = self.filter_identities(identities['term'], load_vocab=True) + identity_include
 
         # Search for matches
         identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
@@ -100,20 +128,34 @@ class DataProcessor:
         #self.data[f'{self.identity_list}_identity_matches'] = [match_identities(*z) for z in tqdm(zipped, ncols=80)]
         
         
-    def filter_identities(self, identities):
-        """ Filter identity list to only those present in the data's vocabulary, returns this list """
+    def filter_identities(self, identities, load_vocab=False):
+        """ Filter identity list to only those present in the data's vocabulary, returns this list.
+            Args:
+                identities: list of identities to see if are in the vocab
+                build_vocab: if False, will construct the vocabulary and save it to self.resources_paths['vocab_path']
+                    If True, will load the vocabulary (as a JSON) from self.resources_paths['vocab_path']
+        """
         # TODO: include multi-word terms that are in the data's bigrams or trigrams, too
 
         print("\tFiltering identity list...")
-        pats = [re.compile(r'\b{}\b'.format(re.escape(term))) for term in identities]
 
-        vocab = set()
-        self.data.content.astype('str').str.lower().str.split().apply(vocab.update)
+        if load_vocab:
+            with open(self.resources_paths['vocab_path'], 'r') as f:
+                vocab = json.load(f)
+            print(f'\t\tLoaded vocab from {self.resources_paths["vocab_path"]}')
 
-        identities = [term for term in identities if term in vocab]
-        print(f'\t\t{len(identities)} out of {len(pats)} identity terms present in vocab')
+        else:
+            vectorizer = CountVectorizer(ngram_range=(1,2), min_df=1)
+            vectorizer.fit(self.data.content.astype(str)) # Takes ~5 min
+            vocab = vectorizer.vocabulary_
+            with open(self.resources_paths['vocab_path'], 'w') as f:
+                json.dump(vocab, f)
+            print(f'\t\tSaved vocab to {self.resources_paths["vocab_path"]}')
 
-        return identities
+        present_identities = [term for term in identities if term in vocab]
+        print(f'\t\t{len(present_identities)} out of {len(identities)} identity terms present in vocab')
+
+        return present_identities
 
     def save(self):
         """ Save out self.data, assumed to have been processed """
@@ -130,8 +172,20 @@ class DataProcessor:
 def main():
 
     #Settings
-    inpath = '../../data/incels/all_comments.csv'
-    outpath = '../../data/incels/processed_comments'
+
+    #dataset_name = 'incels'
+    #inpath = '../../data/incels/all_comments.csv'
+    #outpath = '../../data/incels/processed_comments'
+
+    dataset_name = 'white_supremacist'
+    # TODO: put this in a config file which would be passed to this file
+    dataset_cfg = { 
+        'inpath': '../../white_supremacist/tmp/white_supremacist_corpus.pkl',
+        'outpath': '../data/white_supremacist_identities',
+        'vocab_path': '../tmp/data_vocab.json',
+        'text_column': 'text'
+    }
+
     resources_paths = {
         'netmapper_identities': '../resources/generic_agents-identity_v15_2021_10_15.xlsx',
         'netmapper_exclude': '../resources/netmapper_exclude.json',
@@ -139,9 +193,9 @@ def main():
     }
 
     # Process the data
-    processor = DataProcessor(inpath, outpath, resources_paths)
-    processor.load()
-    processor.process()
+    extractor = IdentityExtractor(dataset_name, dataset_paths, resources_paths)
+    extractor.load()
+    extractor.process()
 
 
 if __name__ == '__main__':
