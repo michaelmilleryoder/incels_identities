@@ -5,3 +5,5 @@ tmp/
 .ipynb_checkpoints/
 resources/generic_agents-identity_v15_2021_10_15.xlsx
 *.swp
+resources/GoogleNews-vectors-negative300*
+__pycache__

@@ -1,0 +1,13 @@
+dataset:
+  name: 'white_supremacist'
+  inpath: '../../white_supremacist_lang/tmp/white_supremacist_corpus.pkl'
+  outpath: '../data/white_supremacist_identities'
+  load_vocab: True
+  vocab_path: '../tmp/white_supremacist_vocab.json'
+  text_column: 'text'
+
+identities:
+  name: 'netmapper'
+  path: '../resources/generic_agents-identity_v15_2021_10_15.xlsx'
+  exclude_path: '../resources/netmapper_exclude.json'
+  include_path: '../resources/netmapper_include.json'
