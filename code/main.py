@@ -16,8 +16,8 @@ def main():
     # Process the data
     extractor = IdentityExtractor(config['dataset']['name'], config['dataset']['inpath'], config['dataset']['outpath'],
         config['identities']['name'], config['identities']['path'], config['dataset']['load_vocab'], 
-        config['dataset']['vocab_path'], config['dataset']['text_column'], config['identities']['exclude_path'],
-        config['identities']['include_path'])
+        config['dataset']['vocab_path'], config['dataset']['text_column'], config['dataset'].get('tokenize', False),
+        config['identities']['exclude_path'], config['identities']['include_path'])
     extractor.load()
     extractor.extract()
 

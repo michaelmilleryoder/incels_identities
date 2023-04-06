@@ -1,5 +1,6 @@
 {
     "black_people": "race/ethnicity",
+	"ethnics": "race/ethnicity",
     "asian_people": "race/ethnicity",
     "white_people": "race/ethnicity",
     "latinx_people": "race/ethnicity",
@@ -11,6 +12,7 @@
     "lgbtq_people": "gender/sexuality",
 	"straight": "gender/sexuality", 
 	"heterosexual": "gender/sexuality", 
+	"hetero": "gender/sexuality", 
 	"heterosexuals": "gender/sexuality", 
 	"cisgender": "gender/sexuality", 
 	"cis": "gender/sexuality", 

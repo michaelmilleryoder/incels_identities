@@ -43,7 +43,8 @@ class IdentityExtractor:
     """ Load data, identify identity term matches from a list, save out """
 
     def __init__(self, dataset_name, inpath, outpath, identities_name, identities_path,  
-            load_vocab=False, vocab_path=None, text_column='text', identities_exclude_path=None, identities_include_path=None):
+            load_vocab=False, vocab_path=None, text_column='text', tokenize=False, 
+            identities_exclude_path=None, identities_include_path=None):
         """ Args:
                 dataset_name: dataset name, to be passed to DataLoader
                 inpath: path to the input data to extract identities from
@@ -55,6 +56,7 @@ class IdentityExtractor:
                 vocab_path: path to a JSON file with the extracted vocabulary from the data (keys ngrams, values counts).
                     If None, will default to ../tmp/{dataset_name}_vocab.json
                 text_column: name of the column in the input data that contains the text
+                tokenize: whether to tokenize the input column. If this is done, the original content will be saved in <text_column>_orig
                 identities_exclude_path: path to a JSON file with a list of terms in the identity list to be excluded
                 identities_include_path: path to a JSON file with a list of terms to be added to the identity list
         """
@@ -67,6 +69,7 @@ class IdentityExtractor:
         else:
             self.vocab_path = vocab_path 
         self.text_column = text_column
+        self.tokenize = tokenize
 
         self.identities_name = identities_name
         self.identities_path = identities_path
@@ -77,7 +80,7 @@ class IdentityExtractor:
     def load(self):
         """ Load data """
         print("Loading data...")
-        data_loader = DataLoader(self.dataset_name, self.inpath)
+        data_loader = DataLoader(self.dataset_name, self.inpath, self.tokenize, self.text_column)
         self.data = data_loader.load()
 
     def extract(self, save = True):
@@ -107,7 +110,6 @@ class IdentityExtractor:
             en_identities.drop_duplicates(subset='term', inplace=True)
 
             # Separate out stopwords
-            stops = en_identities[en_identities['stop word']==1]
             identities = en_identities[
                 (en_identities['stop word']!=1) & (~en_identities['term'].isin(identities_exclude))
             ]
@@ -147,7 +149,7 @@ class IdentityExtractor:
             vectorizer.fit(self.data[self.text_column].astype(str)) # Takes ~5 min
             vocab = vectorizer.vocabulary_
             with open(self.vocab_path, 'w') as f:
-                json.dump(vocab, f)
+                json.dump(vocab, f, indent=4)
             print(f'\t\tSaved vocab to {self.vocab_path}')
 
         present_identities = [term for term in identities if term in vocab]

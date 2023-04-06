@@ -3,6 +3,7 @@ dataset:
   inpath: '../../data/incels/all_comments.csv'
   outpath: '../../data/incels/processed_comments'
   load_vocab: False
+  tokenize: True
   vocab_path: '../tmp/incels_vocab.json'
   text_column: 'content'
 
