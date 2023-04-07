@@ -113,7 +113,7 @@ class IdentityExtractor:
             identities = en_identities[
                 (en_identities['stop word']!=1) & (~en_identities['term'].isin(identities_exclude))
             ]
-            self.identities = self.filter_identities(identities['term']) + identities_include
+            self.identities = self.filter_identities(identities['term'].tolist() + identities_include)
 
 
     def find_identities(self):

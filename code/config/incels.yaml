@@ -1,9 +1,10 @@
 dataset:
   name: incels
-  inpath: '../../data/incels/all_comments.csv'
+  #inpath: '../../data/incels/all_comments.csv' # not tokenized
+  inpath: '../../data/incels/processed_comments.pkl' # tokenized
   outpath: '../../data/incels/processed_comments'
-  load_vocab: False
-  tokenize: True
+  load_vocab: True
+  tokenize: False
   vocab_path: '../tmp/incels_vocab.json'
   text_column: 'content'
 

@@ -432,5 +432,11 @@
     "niece": "race/ethnicity",
     "nephew": "gender/sexuality",
     "dominican": "religion",
-    "aborigine": "race/ethnicity"
+    "aborigine": "race/ethnicity",
+	"ethnics": "race/ethnicity", 
+	"browns": "race/ethnicity",
+	"ethniks": "race/ethnicity", 
+	"natives": "race/ethnicity", 
+	"mulattos": "race/ethnicity",
+	"mulatto": "race/ethnicity" 
 }
