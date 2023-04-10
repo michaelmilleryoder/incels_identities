@@ -1,9 +1,12 @@
+run:
+  identity_extraction: False
+  action_attribute_extraction: True
+
 dataset:
   name: incels
   #inpath: '../../data/incels/all_comments.csv' # not tokenized
   inpath: '../../data/incels/processed_comments.pkl' # tokenized
   outpath: '../../data/incels/processed_comments'
-  load_vocab: True
   tokenize: False
   vocab_path: '../tmp/incels_vocab.json'
   text_column: 'content'
@@ -13,3 +16,4 @@ identities:
   path: '../resources/generic_agents-identity_v15_2021_10_15.xlsx'
   exclude_path: '../resources/netmapper_exclude.json'
   include_path: '../resources/netmapper_include.json'
+  load_vocab: True

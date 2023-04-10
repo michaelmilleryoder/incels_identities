@@ -3,23 +3,31 @@ import spacy
 from tqdm import tqdm
 
 
-class DataLoader:
-    """ Load datasets, tokenize and lowercase if need """
+class Dataset:
+    """ Load datasets, tokenize and lowercase if need. Stores metadata with the data, too """
 
-    def __init__(self, dataset_name, inpath, tokenize=False, text_column=None):
-        """ Args:
-            dataset_name: dataset name
-            inpath: input path to the data
-            tokenize: whether to tokenize
-            text_column: (only if tokenizing) the name of the column of text.
-                After tokenizing, the original content will be kept in <text_column>_orig
+    def __init__(self, dataset_name, inpath, outpath=None, tokenize=False, text_column=None, vocab_path=None):
+        """ 
+            Args:
+                dataset_name: dataset name
+                inpath: input path to the data
+                outpath: path to output, optional, to save the data to if processing is done
+                     (without ending, to be saved with JSON table pandas format and JSON lines)
+                    If None, will default to ../tmp/{dataset_name}_vocab.json
+                tokenize: whether to tokenize the input column. If this is done, the original content will be saved in <text_column>_orig
+                text_column: (only if tokenizing) the name of the column of text.
+                    After tokenizing, the original content will be kept in <text_column>_orig
+                vocab_path: path to a JSON file with the extracted vocabulary from the data (keys ngrams, values counts). 
+                    Optional, default None
         """
         self.dataset_name = dataset_name
         self.inpath = inpath
+        self.outpath = outpath
         self.tokenize = tokenize
         if self.tokenize:
             self.nlp = spacy.load('en_core_web_sm', exclude=['tok2vec', 'tagger', 'parser', 'attribute_ruler', 'lemmatizer', 'ner'])
         self.text_column = text_column
+        self.vocab_path = vocab_path
         self.load_functions = { # mapping from dataset names to load functions
             'incels': self.load_incels,
             'white_supremacist': self.load_pandas_pickle,
@@ -64,3 +72,12 @@ class DataLoader:
         #    }
 
         #dataset.data['hate'] = dataset.data.annotation_Primary.map(label_map.get)
+
+    def save(self):
+        """ Save out self.data, assumed to have been processed """
+        print("Saving...")
+        self.data.to_pickle(self.outpath + '.pkl')
+        print(f'Saved output to {self.outpath + ".pkl"}')
+        self.data.to_json(self.outpath + '.jsonl', orient='records', lines=True)
+        print(f'Saved output to {self.outpath + ".jsonl"}')
+
