@@ -105,7 +105,14 @@ class IdentityExtractor:
         print("\tFinding identity matches...")
 
         # Search for matches
-        identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
+        identity_pats = []
+        for term in self.identities:
+            if term == 'incels':
+                identity_pats.append(r'\bincels(?!\.co|\.is)\b')
+            else:
+                identity_pats.append(r'\b{}\b'.format(re.escape(term)))
+        identity_pat = re.compile(r'|'.join(identity_pats))
+        #identity_pat = re.compile(r'|'.join([(r'\b{}\b'.format(re.escape(term))) for term in self.identities]))
         zipped = list(zip(self.dataset.data[self.dataset.text_column].tolist(), itertools.repeat(identity_pat)))
         with Pool(20) as p:
             self.dataset.data[f'{self.identities_name}_identity_matches'], self.dataset.data[f'{self.identities_name}_identity_matches_spans'] = zip(*p.starmap(match_identities, tqdm(zipped, ncols=80)))

@@ -20,13 +20,13 @@ def unique_term_index(l):
     return res
 
 
-def extract_actions_attributes(nlp, text, identity_matches, identity_spans):
+def extract_actions_attributes(nlp, text, identity_matches, identity_spans, stops=[]):
     """ Extract actions and attributes based on dependency parse """
 
     actions_attributes = [] # for each identity mention, {'actions': [actions], {'attributes': [attributes]}
 
     if len(identity_matches) == 0:
-        return actions_attributes
+        return ([], [], [])
 
     doc = nlp(text)
     #identity_indexes = unique_term_index(identity_matches)
@@ -40,41 +40,46 @@ def extract_actions_attributes(nlp, text, identity_matches, identity_spans):
         #if identity_idx >= len(mention_idx):
         #    continue # probably can't find any matches for the text
         #tok_idx = mention_idx[identity_idx]
-        if len(identity_toks) > 1:
-            # Choose the head
-            unique_heads = [tok for tok in identity_toks if not tok.head in identity_toks]
-            if len(unique_heads) != 1:
-                pdb.set_trace()
-            identity_tok = unique_heads[0]
-        elif len(identity_toks) == 0:
+        #if len(identity_toks) > 1:
+        #    # Choose the head
+        #    unique_heads = [tok for tok in identity_toks if not tok.head in identity_toks \
+        #         and not tok.dep_ in ['det', 'pcomp', 'amod', 'advcl']]
+        #    if len(unique_heads) == 2:
+        #        
+        #    identity_tok = unique_heads[0]
+        if len(identity_toks) == 0:
+            actions_attributes.append({'actions': [], 'attributes': []})
             continue # match is within a word, like TODO: fix man matching within 'w*man', which is a mistake
-        else:
-            identity_tok = identity_toks[0]
+        #else:
+        #    identity_tok = identity_toks[0]
         
         # Verbs where identity term was the subject
-        verbs = []
-        if identity_tok.dep_ == 'nsubj' or identity_tok.dep_ == 'agent':
-            verbs.append(identity_tok.head.text)
-        #verbs_subj = [tok.head.text for tok in doc if tok.i==tok_idx \
-        #    in mention_idx and (tok.dep_=='nsubj' or tok.dep_=='agent')]
+        #verbs = []
+        #if identity_tok.dep_ == 'nsubj' or identity_tok.dep_ == 'agent':
+        #    verbs.append(identity_tok.head.text)
+        verbs_subj = [tok.head.text for tok in doc if tok in identity_toks and (tok.dep_=='nsubj' or tok.dep_=='agent') \
+                        and not tok.head in identity_toks]
+        verbs_subj = [wd for wd in verbs_subj if not wd in stops]
 
         # Verbs where identity term was the object
-        if identity_tok.dep_=='dobj' or identity_tok.dep_=='nsubjpass' or \
-                identity_tok.dep_=='dative' or identity_tok.dep_=='pobj':
-           verbs.append(identity_tok.head.text)
-        #verbs_obj = [tok.head.text for tok in doc if tok.i==tok_idx and \
-        #    (tok.dep_=='dobj' or tok.dep_=='nsubjpass' or \
-        #    tok.dep_=='dative' or tok.dep_=='pobj')]
+        #if identity_tok.dep_=='dobj' or identity_tok.dep_=='nsubjpass' or \
+        #        identity_tok.dep_=='dative' or identity_tok.dep_=='pobj':
+        #   verbs.append(identity_tok.head.text)
+        verbs_obj = [tok.head.text for tok in doc if tok in identity_toks and \
+            (tok.dep_=='dobj' or tok.dep_=='nsubjpass' or \
+            tok.dep_=='dative' or tok.dep_=='pobj') and not tok.head in identity_toks]
+        verbs_obj = [wd for wd in verbs_obj if not wd in stops]
 
         # Adjectives that describe the identity term
-        adjs = [tok.text.lower() for tok in doc if tok.head == identity_tok and \
+        adjs = [tok.text.lower() for tok in doc if tok.head in identity_toks and not tok in identity_toks and \
             (tok.dep_=='amod' or tok.dep_=='appos' or \
             tok.dep_=='nsubj' or tok.dep_=='nmod')] \
             + [tok.text.lower() for tok in doc if tok.dep_=='attr' and \
                 (tok.head.text=='is' or tok.head.text=='was') and \
-               any([c==identity_tok for c in tok.head.children])]
+               any([c in identity_toks for c in tok.head.children])]
+        adjs = [wd for wd in adjs if not wd in stops]
         
-        actions_attributes.append({'actions': verbs, 'attributes': adjs})
+        actions_attributes.append({'actions': verbs_subj + verbs_obj, 'attributes': adjs})
 
     dep_parse = [tok.dep_ for tok in doc]
     dep_head = [tok.head.text for tok in doc]
@@ -91,19 +96,23 @@ class ActionAttributeExtractor:
         self.dataset = dataset
         self.data = self.dataset.data # for ease
         self.nlp = spacy.load('en_core_web_sm', disable=['ner'])
+        self.stops = ['was', 'were', 'to', 'for', 'in', 'on', 'by', 'has', "from", "with", "off",
+            'had', 'been', 'be', 'as', "are", "'re",'’re', '’ll', "'ll", "'s", '’s', '’ve', "'ve",
+             "'m", '’m', "n't", 'n’t', 'at', 'of', 'a', 'an', 'i', 'you']
 
     def extract(self):
         # Process each row to output actions and attributes for each occurrence of identity term
         print("Extracting actions and attributes...")
         zipped = list(zip(itertools.repeat(self.nlp), 
             self.data[self.dataset.text_column], self.data['netmapper_identity_matches'],
-            self.data['netmapper_identity_matches_spans']))
-        #with Pool(20) as p:
-        #    self.data['actions_attributes'], self.data['dep_parse'], self.data['dep_head'] = zip(*p.starmap(
-        #        extract_actions_attributes, tqdm(zipped, ncols=80)))
-        #    #self.data['actions_attributes'], self.data['dep_parse'], self.data['dep_head'] = zip(*[self.extract_actions_attributes(
-        #    #    text, identity_matches) for (text, identity_matches) in tqdm(list(), ncols=80)])
+            self.data['netmapper_identity_matches_spans'],
+            itertools.repeat(self.stops)))
+        with Pool(20) as p:
+            self.data['actions_attributes'], self.data['dep_parse'], self.data['dep_head'] = zip(*p.starmap(
+                extract_actions_attributes, tqdm(zipped, ncols=80)))
         # for debugging
-        self.data['actions_attributes'], self.data['dep_parse'], self.data['dep_head'] = [extract_actions_attributes(*z) for z in tqdm(zipped, ncols=80)]
+        #self.data['actions_attributes'], self.data['dep_parse'], self.data['dep_head'] = zip(*[extract_actions_attributes(*z) for z in tqdm(zipped[:100], ncols=80)])
+        #output = list(zip(*[extract_actions_attributes(*z) for z in tqdm(zipped[:100], ncols=80)]))
+        #output = [extract_actions_attributes(*z) for z in tqdm(zipped[:100], ncols=80)]
         self.dataset.save()
 
