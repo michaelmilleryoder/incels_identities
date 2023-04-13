@@ -1,5 +1,5 @@
 run:
-  identity_extraction: False
+  identity_extraction: True
   action_attribute_extraction: True
 
 dataset:
