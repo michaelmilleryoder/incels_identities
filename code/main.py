@@ -20,7 +20,7 @@ class DataProcessor:
     def process(self):
         # Load data
         self.dataset = Dataset(self.config['dataset']['name'], self.config['dataset']['inpath'], 
-            outpath=self.config['dataset']['outpath'], tokenize=self.config['dataset'].get('tokenize', False), 
+            outpath=self.config['dataset']['outpath'], preprocess=self.config['dataset'].get('preprocess', False), 
             text_column=self.config['dataset']['text_column'],
             vocab_path=self.config['dataset']['vocab_path'])
         self.dataset.load()

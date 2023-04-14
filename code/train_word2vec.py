@@ -11,7 +11,7 @@ import pandas as pd
 from gensim.models import Word2Vec, KeyedVectors
 import gensim.downloader
 
-from data import DataLoader
+from data import Dataset
 
 gensim.models.word2vec.logger.level = logging.INFO
 
@@ -80,7 +80,7 @@ def main():
     pretrained_path = None
 
     # Load incels data (goes into RAM, could use Gensim LineSentence to load iteratively from file)
-    data = DataLoader(dataset_name, inpath).load()['content'].str.split()
+    data = Dataset(dataset_name, inpath).load()['content'].str.split()
     trainer = Word2vecTrainer(dataset_name, outpath, pretrained_name, pretrained_path)
     trainer.train(data)
 

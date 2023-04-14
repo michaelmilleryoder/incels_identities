@@ -4,10 +4,10 @@ run:
 
 dataset:
   name: incels
-  #inpath: '../../data/incels/all_comments.csv' # not tokenized
-  inpath: '../../data/incels/processed_comments.pkl' # tokenized
+  inpath: '../../data/incels/all_comments.csv' # not tokenized
+  #inpath: '../../data/incels/processed_comments.pkl' # tokenized
   outpath: '../../data/incels/processed_comments'
-  tokenize: False
+  preprocess: True
   vocab_path: '../tmp/incels_vocab.json'
   text_column: 'content'
 
