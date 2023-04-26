@@ -1,13 +1,13 @@
 run:
-  identity_extraction: True
+  identity_extraction: False
   action_attribute_extraction: True
 
 dataset:
   name: incels
-  inpath: '../../data/incels/all_comments.csv' # not tokenized
-  #inpath: '../../data/incels/processed_comments.pkl' # tokenized
+  #inpath: '../../data/incels/all_comments.csv' # not tokenized
+  inpath: '../../data/incels/processed_comments.pkl' # tokenized
   outpath: '../../data/incels/processed_comments'
-  preprocess: True
+  preprocess: False
   vocab_path: '../tmp/incels_vocab.json'
   text_column: 'content'
 

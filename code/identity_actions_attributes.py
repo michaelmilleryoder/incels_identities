@@ -99,7 +99,9 @@ class ActionAttributeExtractor:
         self.stops = ['is', 'was', 'were', 'to', 'for', 'in', 'on', 'by', 'has', 'have', "from", "with", "off",
             'had', 'been', 'be', 'as', "are", "'re",'’re', 're', '’ll', "'ll", "'s", '’s', 's', '’ve', "'ve",
              "'m", '’m', "n't", 'n’t', 'at', 'of', 'a', 'an', 'i', 'you', 'than', 'about', 'into',
-            'being', '-', 'between', 'among']
+            'being', '-', 'between', 'among', 'many', 'more', 'most', 'what', 'they', 'we', 'us', 'he', 'who', 
+            'me', 'do', 'm', 'more', 'him', 'myself', 'someone', 'some', 'ur', 'u', 'few', '@', 'them', 'anyone', 
+            'everyone', 'yourself', 'people', 'based', 'only', 'that', '=']
 
     def extract(self):
         # Process each row to output actions and attributes for each occurrence of identity term
