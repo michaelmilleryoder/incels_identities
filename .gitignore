@@ -4,6 +4,8 @@ models/
 tmp/
 .ipynb_checkpoints/
 resources/generic_agents-identity_v15_2021_10_15.xlsx
+resources/identities_tags_v2_2022_5_26.xslx
+resources/cel_exclude.json
 *.swp
 resources/GoogleNews-vectors-negative300*
 __pycache__
